@@ -5,7 +5,7 @@ import { ArrowRight } from 'lucide-react';
 export default function Hero() {
   return (
     <section className="relative bg-verde-dehesa text-white py-20 sm:py-32 overflow-hidden">
-      {/* Patrón de fondo sutil */}
+     
       <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent"></div>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">

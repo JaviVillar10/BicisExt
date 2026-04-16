@@ -7,10 +7,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        'verde-dehesa': '#3D5229',
-        'gris-asfalto': '#1F2937',
-        'blanco-humo': '#F9FAFB',
-        'naranja-alerta': '#F59E0B'
+        // CAMBIAMOS EL VERDE OSCURO POR EL VERDE BONITO DE EXTREMADURA
+        'verde-dehesa': '#009739', 
+        'gris-asfalto': '#333333',
       }
     },
   },

@@ -1,8 +1,13 @@
-// Ruta: src/App.tsx
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
-import SignUpPage from './pages/SignUpPage'; 
+import SignUpPage from './pages/SignUpPage';
+
+import DashboardLayout from './layouts/DashboardLayout';
+import DashboardHome from './pages/dashboard/DashboardHome';
+import CrearRutaPage from './pages/dashboard/CrearRutaPage';
+import MisRutasPage from './pages/dashboard/MisRutasPage';
+import PerfilPage from './pages/dashboard/PerfilPage';
 
 function App() {
   return (
@@ -10,7 +15,16 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/registro" element={<SignUpPage />} /> {}
+        <Route path="/registro" element={<SignUpPage />} />
+
+       <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route index element={<DashboardHome />} />
+          <Route path="crear" element={<CrearRutaPage />} />
+          <Route path="mis-rutas" element={<MisRutasPage />} />
+          <Route path="perfil" element={<PerfilPage />} />
+          
+          
+        </Route>
       </Routes>
     </Router>
   );
