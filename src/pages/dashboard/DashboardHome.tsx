@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { MapPin, Clock, Users, Calendar, Activity, Bike, Mountain, Map, Compass, ChevronRight, Loader2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function DashboardHome() {
   const [rutas, setRutas] = useState<any[]>([]);
@@ -49,8 +50,13 @@ export default function DashboardHome() {
   };
 
   const getIconoBici = (tipo: string, colorClass: string) => {
+    const t = tipo.toLowerCase();
+    
+    if (t === 'mtb' || t === 'mountain bike') {
+      return <Mountain size={28} className={colorClass} />;
+    }
+    
     switch (tipo) {
-      case 'mountain bike': return <Mountain size={28} className={colorClass} />;
       case 'Carretera': return <Bike size={28} className={colorClass} />;
       case 'Gravel': return <Map size={28} className={colorClass} />;
       case 'Urbana': return <Compass size={28} className={colorClass} />;
@@ -99,9 +105,10 @@ export default function DashboardHome() {
                     <span className={`text-[10px] font-black uppercase tracking-widest text-white px-2 py-1 rounded-md ${estilos.etiqueta}`}>
                       {ruta.dificultad}
                     </span>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
-                      {ruta.tipo_bici}
-                    </span>
+                   <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+                    {}
+                    {ruta.tipo_bici === 'MTB' ? 'Mountain Bike' : ruta.tipo_bici}
+                  </span>
                   </div>
 
                   <h3 className="text-2xl font-black text-gray-900 mb-4 leading-tight group-hover:text-verde-dehesa transition-colors line-clamp-2">
@@ -111,7 +118,7 @@ export default function DashboardHome() {
                   <div className="space-y-4 text-gray-500 text-sm mb-6">
                     <div className="flex items-center gap-3">
                       <MapPin size={18} className="text-gray-400" />
-                      {/* HEMOS VUELTO AL TEXTO GENÉRICO PARA EL TFG */}
+                      {}
                       <span className="font-bold">Ubicación por definir en mapa</span>
                     </div>
                     <div className="flex items-center gap-3">
@@ -135,10 +142,14 @@ export default function DashboardHome() {
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-gray-50">
-                  <button className="w-full flex items-center justify-center gap-2 bg-verde-dehesa text-white px-4 py-3 rounded-xl font-bold hover:scale-[1.02] active:scale-95 transition-all text-sm uppercase tracking-widest">
+               <div className="pt-4 border-t border-gray-50">
+                  {}
+                  <Link 
+                    to={`/dashboard/rutas/${ruta.id}`} 
+                    className="w-full flex items-center justify-center gap-2 bg-verde-dehesa text-white px-4 py-3 rounded-xl font-bold hover:scale-[1.02] active:scale-95 transition-all text-sm uppercase tracking-widest"
+                  >
                     Ver Detalles de Ruta <ChevronRight size={18} />
-                  </button>
+                  </Link>
                 </div>
               </div>
             );

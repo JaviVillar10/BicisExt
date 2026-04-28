@@ -1,30 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
-import { MapPin, Calendar, Info, Gauge, Save, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import { Calendar, Info, Gauge, Save, AlertCircle, Loader2, CheckCircle2, Map, UploadCloud, FileText, X } from 'lucide-react';
 
 export default function CrearRutaPage() {
   const navigate = useNavigate();
 
-  
   const [formData, setFormData] = useState({
     titulo: '',
     descripcion: '',
     fecha_hora_salida: '',
-    tipo_bici: 'mountain bike',
+    tipo_bici: 'MTB',
     dificultad: 'Baja',
     distancia_estimada_km: '',
-    limite_participantes: '10' 
+    limite_participantes: '10'
   });
+  const [archivoGpx, setArchivoGpx] = useState<File | null>(null);
 
-  
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isValid, setIsValid] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  // Función para calcular la fecha y hora mínima
   const getMinDateTime = () => {
     const now = new Date();
     now.setHours(now.getHours() + 2);
@@ -38,7 +36,6 @@ export default function CrearRutaPage() {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
- 
   const validateField = (name: string, value: string) => {
     let error = '';
     switch (name) {
@@ -53,7 +50,6 @@ export default function CrearRutaPage() {
           const selectedDate = new Date(value);
           const minDate = new Date();
           minDate.setHours(minDate.getHours() + 2);
-
           if (selectedDate < minDate) {
             error = 'La ruta debe programarse con al menos 2 horas de antelación.';
           }
@@ -71,7 +67,6 @@ export default function CrearRutaPage() {
     return error;
   };
 
-  
   useEffect(() => {
     const newErrors: Record<string, string> = {};
     Object.keys(formData).forEach(key => {
@@ -80,7 +75,6 @@ export default function CrearRutaPage() {
     });
     setErrors(newErrors);
 
-    
     const requiredFilled = formData.titulo && formData.descripcion && formData.fecha_hora_salida && formData.distancia_estimada_km && formData.limite_participantes;
     setIsValid(Object.keys(newErrors).length === 0 && Boolean(requiredFilled));
   }, [formData]);
@@ -90,11 +84,23 @@ export default function CrearRutaPage() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // Manejar la subida del archivo GPX
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validar que sea un archivo .gpx
+      if (!file.name.toLowerCase().endsWith('.gpx')) {
+        alert('Por favor, sube únicamente archivos con extensión .gpx');
+        return;
+      }
+      setArchivoGpx(file);
+    }
+  };
+
   const handleBlur = (name: string) => {
     setTouched(prev => ({ ...prev, [name]: true }));
   };
 
-  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid || isLoading) return;
@@ -106,8 +112,30 @@ export default function CrearRutaPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('No hay sesión iniciada');
 
+      let archivoUrl = null;
+
+      // 1. SI HAY ARCHIVO, LO SUBIMOS AL STORAGE PRIMERO
+      if (archivoGpx) {
+        const fileExt = archivoGpx.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${session.user.id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('archivos_rutas')
+          .upload(filePath, archivoGpx);
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage
+          .from('archivos_rutas')
+          .getPublicUrl(filePath);
+
+        archivoUrl = publicUrlData.publicUrl;
+      }
+
+      // 2. GUARDAMOS LA RUTA EN LA BASE DE DATOS
       const { error } = await supabase.from('rutas').insert([{
-        creador_id: session.user.id, // OBLIGATORIO por tu RLS
+        creador_id: session.user.id,
         titulo: formData.titulo,
         descripcion: formData.descripcion,
         fecha_hora_salida: new Date(formData.fecha_hora_salida).toISOString(),
@@ -115,24 +143,26 @@ export default function CrearRutaPage() {
         dificultad: formData.dificultad,
         distancia_estimada_km: parseFloat(formData.distancia_estimada_km),
         limite_participantes: parseInt(formData.limite_participantes),
-        estado: 'pendiente'
+        estado: 'pendiente',
+        archivo_gpx_url: archivoUrl
       }]);
 
       if (error) throw error;
-      setNotification({ type: 'success', text: '¡Ruta creada con éxito! Redirigiendo...' });
+      
+      setNotification({ type: 'success', text: '¡Ruta y mapa guardados con éxito! Redirigiendo...' });
+      
       setTimeout(() => {
         navigate('/dashboard/mis-rutas');
       }, 2000);
       
     } catch (err: any) {
       console.error("Error al crear la ruta:", err);
-      setNotification({ type: 'error', text: 'Hubo un problema al crear la ruta. Inténtalo de nuevo.' });
+      setNotification({ type: 'error', text: 'Hubo un problema al guardar la ruta. Inténtalo de nuevo.' });
       setIsLoading(false);
       setTimeout(() => setNotification(null), 4000);
     }
   };
 
- 
   const ErrorMessage = ({ name }: { name: string }) => (
     touched[name] && errors[name] ? (
       <p className="text-red-500 text-xs font-bold mt-1 flex items-center gap-1 animate-fade-in-down">
@@ -144,7 +174,6 @@ export default function CrearRutaPage() {
   return (
     <div className="max-w-4xl mx-auto pb-10 relative">
       
-      {/* MENSAJE FLOTANTE DE NOTIFICACIÓN */}
       {notification && (
         <div className={`fixed top-24 left-1/2 transform -translate-x-1/2 z-50 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3 animate-fade-in-down transition-all ${
           notification.type === 'success' ? 'bg-verde-dehesa text-white' : 'bg-red-600 text-white'
@@ -161,7 +190,7 @@ export default function CrearRutaPage() {
 
       <form className="space-y-6" onSubmit={handleSubmit}>
         
-        {/* SECCIÓN 1: Información Básica */}
+        {/* Información Básica */}
         <div className="bg-white rounded-3xl p-8 shadow-sm border border-verde-dehesa/10 relative overflow-hidden">
           <div className="absolute left-0 top-0 bottom-0 w-2 bg-verde-dehesa"></div>
           
@@ -184,21 +213,51 @@ export default function CrearRutaPage() {
           </div>
         </div>
 
-        {/* SECCIÓN 2: Logística y Ubicación */}
+        {/* MAPA Y LOGÍSTICA */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          {/* CAJA DE SUBIDA DE ARCHIVO GPX */}
           <div className="bg-white rounded-3xl p-8 shadow-sm border border-verde-dehesa/10 relative overflow-hidden">
             <div className="absolute left-0 top-0 bottom-0 w-2 bg-verde-dehesa"></div>
             <div className="flex items-center gap-2 mb-6 text-verde-dehesa">
-              <MapPin size={20} />
-              <h3 className="font-black uppercase tracking-wider text-sm">Punto de Encuentro</h3>
+              <Map size={20} />
+              <h3 className="font-black uppercase tracking-wider text-sm">Trazado GPS</h3>
             </div>
-            <div className="space-y-4">
-              <input type="text" disabled placeholder="Próximamente mapa interactivo" className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-100 cursor-not-allowed outline-none font-medium" />
-              <div className="p-4 bg-emerald-50 rounded-2xl border border-verde-dehesa/10 text-xs text-emerald-800 font-bold flex items-center gap-3">
-                <Info size={16} className="shrink-0" />
-                <span>Próximamente: Podrás seleccionar la ubicación exacta en el mapa de Extremadura.</span>
+            
+            {!archivoGpx ? (
+              <div className="relative border-2 border-dashed border-gray-200 rounded-2xl p-6 flex flex-col items-center justify-center bg-gray-50 hover:bg-emerald-50 hover:border-verde-dehesa/50 transition-colors group cursor-pointer h-32">
+                <input 
+                  type="file" 
+                  accept=".gpx" 
+                  onChange={handleFileChange} 
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                  title="Sube tu archivo .gpx"
+                />
+                <UploadCloud size={32} className="text-gray-400 group-hover:text-verde-dehesa mb-2 transition-colors" />
+                <p className="text-sm font-bold text-gray-700 text-center">Sube tu archivo <span className="text-verde-dehesa">.GPX</span></p>
+                <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider">Garmin, Strava, Wikiloc...</p>
               </div>
-            </div>
+            ) : (
+              <div className="relative border border-verde-dehesa/30 rounded-2xl p-4 flex items-center justify-between bg-emerald-50 h-32">
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="p-3 bg-white rounded-xl shadow-sm text-verde-dehesa shrink-0">
+                    <FileText size={24} />
+                  </div>
+                  <div className="overflow-hidden">
+                    <p className="text-sm font-black text-gray-900 truncate">{archivoGpx.name}</p>
+                    <p className="text-xs text-verde-dehesa font-bold">{(archivoGpx.size / 1024).toFixed(1)} KB</p>
+                  </div>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => setArchivoGpx(null)}
+                  className="p-2 text-red-500 hover:bg-red-100 rounded-lg transition-colors"
+                  title="Eliminar archivo"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-3xl p-8 shadow-sm border border-verde-dehesa/10 relative overflow-hidden">
@@ -216,7 +275,7 @@ export default function CrearRutaPage() {
           </div>
         </div>
 
-        {/* SECCIÓN 3: Detalles Técnicos */}
+        {/* Detalles Técnicos */}
         <div className="bg-white rounded-3xl p-8 shadow-sm border border-verde-dehesa/10 relative overflow-hidden">
           <div className="absolute left-0 top-0 bottom-0 w-2 bg-verde-dehesa"></div>
           <div className="flex items-center gap-2 mb-6 text-verde-dehesa">
@@ -227,7 +286,7 @@ export default function CrearRutaPage() {
             <div>
               <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest">Tipo de Bici</label>
               <select name="tipo_bici" value={formData.tipo_bici} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 font-bold text-gray-700 outline-none">
-                <option value="mountain bike">Mountain bike</option>
+                <option value="Mountain bike">Mountain Bike</option>
                 <option value="Carretera">Carretera</option>
                 <option value="Gravel">Gravel</option>
                 <option value="Urbana">Urbana</option>
@@ -255,7 +314,7 @@ export default function CrearRutaPage() {
           </div>
         </div>
 
-        {}
+        {/* BOTONES */}
         <div className="flex justify-end gap-4 pt-4">
           <button type="button" onClick={() => navigate('/dashboard')} className="px-8 py-4 rounded-2xl font-black text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-widest text-sm">
             Cancelar

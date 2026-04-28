@@ -8,6 +8,7 @@ import DashboardHome from './pages/dashboard/DashboardHome';
 import CrearRutaPage from './pages/dashboard/CrearRutaPage';
 import MisRutasPage from './pages/dashboard/MisRutasPage';
 import PerfilPage from './pages/dashboard/PerfilPage';
+import RutaDetallePage from './pages/dashboard/RutaDetallePage';
 
 function App() {
   return (
@@ -22,7 +23,7 @@ function App() {
           <Route path="crear" element={<CrearRutaPage />} />
           <Route path="mis-rutas" element={<MisRutasPage />} />
           <Route path="perfil" element={<PerfilPage />} />
-          
+          <Route path="/dashboard/rutas/:id" element={<RutaDetallePage />} />
           
         </Route>
       </Routes>
